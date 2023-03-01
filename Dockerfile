@@ -4,17 +4,36 @@ EXPOSE 8888 6006
 
 ENV JUPYTER_TOKEN=123456
 
-RUN apt update
-RUN apt install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg
+RUN apt-get update
+RUN apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential
 
 RUN /opt/conda/bin/conda init bash
 RUN /opt/conda/bin/conda install -y jupyter jupyterlab
 RUN jupyter notebook --generate-config
 COPY assets/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
 
+# Setup environment
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.1.5/zsh-in-docker.sh)" -- \
+    -t robbyrussell \
+    -p https://github.com/zsh-users/zsh-autosuggestions \
+    -p https://github.com/zsh-users/zsh-syntax-highlighting
+
+# download theme
+RUN curl -fsSL https://raw.githubusercontent.com/ControlNet/my-zsh-theme-env/main/files/mzz-ys.zsh-theme > /root/.oh-my-zsh/themes/mzz-ys.zsh-theme
+
+# modify the .zshrc file to change the theme and add plugins
+RUN cat /root/.zshrc | sed 's/ZSH_THEME=\"robbyrussell\"/ZSH_THEME=\"mzz-ys\"\nZSH_DISABLE_COMPFIX=\"true\"/' \
+    | sed 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/' > /root/temp.zshrc
+RUN mv /root/temp.zshrc /root/.zshrc
+
+# setup git alias
+RUN git config --global alias.lsd "log --graph --decorate --pretty=oneline --abbrev-commit --all"
+
+# hide conda prefix
+RUN echo "changeps1: false" >> /root/.condarc
+
 # clean
 RUN pip cache purge
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
-
 
 ENTRYPOINT /opt/conda/bin/jupyter notebook
