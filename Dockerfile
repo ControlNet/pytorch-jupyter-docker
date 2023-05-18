@@ -4,13 +4,15 @@ EXPOSE 8888 6006
 
 ENV JUPYTER_TOKEN=123456
 
-RUN apt-get update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential
+RUN apt-get update &&\
+    DEBIAN_FRONTEND=noninteractive apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential &&\
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN /opt/conda/bin/conda init bash
-RUN /opt/conda/bin/conda install -y jupyter jupyterlab -c conda-forge
-RUN /opt/conda/bin/pip install jupyter_collaboration xeus-python
-RUN jupyter notebook --generate-config
+RUN /opt/conda/bin/conda init bash &&\
+    /opt/conda/bin/conda install -y jupyter jupyterlab -c conda-forge &&\
+    /opt/conda/bin/pip install jupyter_collaboration xeus-python &&\
+    jupyter notebook --generate-config &&\
+    pip cache purge && conda clean -a
 COPY assets/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
 
 # Setup environment
@@ -32,9 +34,5 @@ RUN git config --global alias.lsd "log --graph --decorate --pretty=oneline --abb
 
 # hide conda prefix
 RUN echo "changeps1: false" >> /root/.condarc
-
-# clean
-RUN pip cache purge
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT /opt/conda/bin/jupyter lab --collaborative --allow-root
