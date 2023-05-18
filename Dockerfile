@@ -1,14 +1,15 @@
-FROM pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
 WORKDIR /workspace
 EXPOSE 8888 6006
 
 ENV JUPYTER_TOKEN=123456
 
 RUN apt-get update
-RUN apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential
 
 RUN /opt/conda/bin/conda init bash
-RUN /opt/conda/bin/conda install -y jupyter jupyterlab
+RUN /opt/conda/bin/conda install -y jupyter jupyterlab -c conda-forge
+RUN /opt/conda/bin/pip install jupyter_collaboration xeus-python
 RUN jupyter notebook --generate-config
 COPY assets/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
 
@@ -36,4 +37,4 @@ RUN echo "changeps1: false" >> /root/.condarc
 RUN pip cache purge
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ENTRYPOINT /opt/conda/bin/jupyter notebook
+ENTRYPOINT /opt/conda/bin/jupyter lab --collaborative --allow-root
