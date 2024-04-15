@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
 WORKDIR /workspace
 EXPOSE 8888 6006
 
@@ -10,7 +10,7 @@ RUN apt-get update &&\
 
 RUN /opt/conda/bin/conda init bash && /opt/conda/bin/conda init zsh &&\
     /opt/conda/bin/conda install -y jupyter jupyterlab -c conda-forge &&\
-    /opt/conda/bin/pip install jupyter_collaboration xeus-python &&\
+    /opt/conda/bin/pip install xeus-python &&\
     jupyter notebook --generate-config &&\
     pip cache purge && conda clean -a
 COPY assets/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
@@ -35,4 +35,5 @@ RUN git config --global alias.lsd "log --graph --decorate --pretty=oneline --abb
 # hide conda prefix
 RUN echo "changeps1: false" >> /root/.condarc
 
-ENTRYPOINT /opt/conda/bin/jupyter lab --collaborative --allow-root
+SHELL ["/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "base", "/bin/zsh", "-c"]
+ENTRYPOINT [ "/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "base", "jupyter", "lab", "--allow-root"]
