@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.1.2-cuda11.8-cudnn8-runtime
+FROM pytorch/pytorch:2.2.2-cuda11.8-cudnn8-runtime
 WORKDIR /workspace
 EXPOSE 8888 6006
 
