@@ -14,3 +14,5 @@ content = re.sub(r"FROM pytorch/pytorch:(.+?)-runtime", f"FROM pytorch/pytorch:{
 
 with open("Dockerfile", "w") as f:
     f.write(content)
+
+print(content)
