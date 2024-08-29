@@ -10,6 +10,18 @@ jobs:
     name: Dockerhub Release
     runs-on: ubuntu-20.04
 
+    strategy:
+      matrix:
+        pytorch-tag:
+          - "1.13.1-cuda11.6-cudnn8"
+          - "2.0.1-cuda11.7-cudnn8"
+          - "2.1.0-cuda11.8-cudnn8"
+          - "2.1.2-cuda11.8-cudnn8"
+          - "2.2.2-cuda11.8-cudnn8"
+          - "2.3.0-cuda11.8-cudnn8"
+          - "2.3.1-cuda11.8-cudnn8"
+          - "2.4.0-cuda11.8-cudnn9"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -25,13 +37,19 @@ jobs:
         with:
           python-version: '3.11'
       
-      - name: Get latest tag
+      - name: Replace tag in Dockerfile
         run: |
-          VER=$(python .github/get_tag.py)
-          echo "VERSION=$VER" >> $GITHUB_ENV
+          python .github/modify_tag.py --tag ${{ matrix.pytorch-tag }}
 
-      - name: Build and push
+      - name: Build and push with tag
         uses: docker/build-push-action@v4
         with:
           push: true
-          tags: controlnet/pytorch-jupyter:latest,controlnet/pytorch-jupyter:${{ env.VERSION }}
+          tags: controlnet/pytorch-jupyter:${{ matrix.pytorch-tag }}
+
+      - name: Build and push with latest
+        if: matrix.pytorch-tag == '2.4.0-cuda11.8-cudnn9'
+        uses: docker/build-push-action@v4
+        with:
+          push: true
+          tags: controlnet/pytorch-jupyter:latest

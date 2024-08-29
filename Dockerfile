@@ -1,11 +1,11 @@
 FROM pytorch/pytorch:2.2.2-cuda11.8-cudnn8-runtime
 WORKDIR /workspace
-EXPOSE 8888 6006
+EXPOSE 8888 6006 22
 
 ENV JUPYTER_TOKEN=123456
 
 RUN apt-get update &&\
-    DEBIAN_FRONTEND=noninteractive apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential &&\
+    DEBIAN_FRONTEND=noninteractive apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential openssh-server tmux &&\
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN /opt/conda/bin/conda init bash && /opt/conda/bin/conda init zsh &&\
@@ -35,5 +35,27 @@ RUN git config --global alias.lsd "log --graph --decorate --pretty=oneline --abb
 # hide conda prefix
 RUN echo "changeps1: false" >> /root/.condarc
 
+# enable ssh
+RUN mkdir /var/run/sshd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+# Set zsh as the default shell through conda for SSH
+RUN sed -i 's|/bin/bash|/bin/zsh|' /etc/passwd
+
+# Copy entrypoint script
+COPY assets/entrypoint.sh /entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /entrypoint.sh
+
+# setup tmux color
+RUN echo "set -g default-terminal \"screen-256color\"" >> ~/.tmux.conf
+
+# setup term color
+RUN echo "export TERM=xterm-256color" >> ~/.zshrc
+
 SHELL ["/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "base", "/bin/zsh", "-c"]
-ENTRYPOINT [ "/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "base", "jupyter", "lab", "--allow-root"]
+# ENTRYPOINT [ "/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "base", "jupyter", "lab", "--allow-root"]
+# ENTRYPOINT ["/bin/zsh", "-c", "echo root:${JUPYTER_TOKEN} | chpasswd && /usr/sbin/sshd -D & conda run --no-capture-output -n base jupyter lab --allow-root"]
+ENTRYPOINT [ "/entrypoint.sh" ]
