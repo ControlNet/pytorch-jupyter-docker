@@ -54,7 +54,7 @@ jobs:
           tags: controlnet/pytorch-jupyter:${{ matrix.pytorch-tag }}
 
       - name: Build and push with latest
-        if: matrix.pytorch-tag == "2.7.0-cuda11.8-cudnn9"
+        if: matrix.pytorch-tag == '2.7.0-cuda11.8-cudnn9'
         uses: docker/build-push-action@v4
         with:
           context: .
