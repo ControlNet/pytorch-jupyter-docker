@@ -25,6 +25,7 @@ jobs:
           - "2.5.0-cuda11.8-cudnn9"
           - "2.5.1-cuda11.8-cudnn9"
           - "2.6.0-cuda11.8-cudnn9"
+          - "2.7.0-cuda11.8-cudnn9"
 
     steps:
       - name: Checkout
