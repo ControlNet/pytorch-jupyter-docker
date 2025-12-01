@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'  # daily at 03:00 UTC
 
 jobs:
 
@@ -50,7 +53,7 @@ jobs:
 
       - name: Build and push image
         uses: docker/build-push-action@v4
-        if: matrix.build.exists == false
+        if: matrix.build.exists == false || github.event_name == 'workflow_dispatch'
         with:
           context: .
           push: true
@@ -64,3 +67,12 @@ jobs:
           docker buildx imagetools create \
             --tag controlnet/pytorch-jupyter:latest \
             controlnet/pytorch-jupyter:${{ matrix.build.tag }}
+
+      - name: Append summary
+        if: always()
+        env:
+          TAG: ${{ matrix.build.tag }}
+          KIND: ${{ matrix.build.kind }}
+          EXISTS: ${{ matrix.build.exists }}
+          PUSH_LATEST: ${{ matrix.build.push_latest }}
+        run: python scripts/append_summary.py
