@@ -97,7 +97,7 @@ def main() -> int:
         for b in builds:
             summary_lines.append(
                 f"| {b['tag']} | {b['kind']} | {'yes' if b['exists'] else 'no'} | "
-                f\"{'yes' if b['will_build'] else 'no'} | {'yes' if b['push_latest'] else 'no'} |"
+                f"{'yes' if b['will_build'] else 'no'} | {'yes' if b['push_latest'] else 'no'} |"
             )
         Path(summary_path).write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
     else:
