@@ -116,4 +116,10 @@ jobs:
         run: |
           echo "| Tag | Exists | Will Build | Latest | Status |" >> "$GITHUB_STEP_SUMMARY"
           echo "| --- | --- | --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
-          cat summary_lines/summary-*/summary_line.txt 2>/dev/null >> "$GITHUB_STEP_SUMMARY"
+          shopt -s nullglob globstar
+          files=(summary_lines/**/*.txt summary_lines/*.txt)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "| _no entries_ | - | - | - | - |" >> "$GITHUB_STEP_SUMMARY"
+          else
+            cat "${files[@]}" >> "$GITHUB_STEP_SUMMARY"
+          fi
