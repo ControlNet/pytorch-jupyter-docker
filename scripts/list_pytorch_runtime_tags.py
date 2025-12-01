@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-List pytorch/pytorch tags that contain 'runtime' and have version >= MIN_VERSION.
+List pytorch/pytorch tags of a given kind (runtime or devel) with version >= MIN_VERSION.
 Sorted so that the first element is:
   - the latest (highest) PyTorch version
   - with the earliest CUDA version available for that PyTorch release
@@ -9,6 +9,7 @@ Outputs a compact JSON array.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import sys
@@ -18,7 +19,6 @@ from typing import List, Tuple, Optional
 REPO = "pytorch/pytorch"
 PAGE_SIZE = 100
 MIN_VERSION: Tuple[int, ...] = (1, 13)  # minimum major.minor
-REQUIRED_SUBSTR = "runtime"
 EXCLUDED_SUBSTRINGS = ("rocm",)
 
 
@@ -54,8 +54,8 @@ def parse_cuda_version(name: str) -> Optional[Tuple[int, ...]]:
         return None
 
 
-def is_valid_tag(name: str) -> bool:
-    if REQUIRED_SUBSTR not in name:
+def is_valid_tag(name: str, required_substr: str) -> bool:
+    if required_substr not in name:
         return False
     if any(excl in name for excl in EXCLUDED_SUBSTRINGS):
         return False
@@ -69,7 +69,7 @@ def is_valid_tag(name: str) -> bool:
     return prefix >= MIN_VERSION
 
 
-def collect_tags() -> List[str]:
+def collect_tags(required_substr: str) -> List[str]:
     url = (
         f"https://registry.hub.docker.com/v2/repositories/{REPO}/tags"
         f"?page_size={PAGE_SIZE}&ordering=last_updated"
@@ -83,7 +83,7 @@ def collect_tags() -> List[str]:
             name = item.get("name", "")
             if name in seen:
                 continue
-            if is_valid_tag(name):
+            if is_valid_tag(name, required_substr):
                 seen.add(name)
                 tags.append(name)
         url = data.get("next")
@@ -100,7 +100,16 @@ def collect_tags() -> List[str]:
 
 
 def main() -> int:
-    tags = collect_tags()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--kind",
+        choices=["runtime", "devel"],
+        default="runtime",
+        help="Which PyTorch image flavor to list",
+    )
+    args = parser.parse_args()
+
+    tags = collect_tags(args.kind)
     # Compact JSON (no spaces) for easy use in GitHub Actions outputs
     print(json.dumps(tags, separators=(",", ":")))
     return 0 if tags else 1

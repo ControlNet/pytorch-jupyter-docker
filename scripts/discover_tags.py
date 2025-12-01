@@ -11,27 +11,93 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Set
+import urllib.request
+
+TARGET_REPO = os.getenv("TARGET_REPO", "controlnet/pytorch-jupyter")
 
 
-def get_tags() -> list[str]:
+def latest_runtime(tags: list[str]) -> str:
+    return tags[0] if tags else ""
+
+
+def fetch_existing_tags(repo: str) -> Set[str]:
+    """
+    Fetch existing tags from a Docker Hub repo, returning a set of tag names.
+    """
+    tags: Set[str] = set()
+    url = f"https://hub.docker.com/v2/repositories/{repo}/tags?page_size=100"
+    while url:
+        with urllib.request.urlopen(url) as resp:  # nosec B310
+            data = json.load(resp)
+        for item in data.get("results", []):
+            name = item.get("name")
+            if name:
+                tags.add(name)
+        url = data.get("next")
+    return tags
+
+
+def get_tags(kind: str) -> list[str]:
     out = subprocess.check_output(
-        [sys.executable, "scripts/list_pytorch_runtime_tags.py"], text=True
+        [sys.executable, "scripts/list_pytorch_runtime_tags.py", "--kind", kind],
+        text=True,
     )
     return json.loads(out)
 
 
 def main() -> int:
-    tags = get_tags()
-    latest = tags[0] if tags else ""
+    runtime_tags = get_tags("runtime")
+    devel_tags = get_tags("devel")
+    latest = latest_runtime(runtime_tags)
+
+    existing = fetch_existing_tags(TARGET_REPO)
+
+    builds = []
+    for t in runtime_tags:
+        exists = t in existing
+        push_latest = t == latest
+        if not exists or push_latest:
+            builds.append(
+                {
+                    "tag": t,
+                    "push_latest": push_latest,
+                    "kind": "runtime",
+                    "exists": exists,
+                }
+            )
+    for t in devel_tags:
+        exists = t in existing
+        if not exists:
+            builds.append(
+                {
+                    "tag": t,
+                    "push_latest": False,
+                    "kind": "devel",
+                    "exists": exists,
+                }
+            )
 
     out_path = os.environ.get("GITHUB_OUTPUT")
     if out_path:
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "a", encoding="utf-8") as f:
-            f.write(f"tags={json.dumps(tags, separators=(',',':'))}\n")
+            f.write(f"runtime_tags={json.dumps(runtime_tags, separators=(',',':'))}\n")
+            f.write(f"devel_tags={json.dumps(devel_tags, separators=(',',':'))}\n")
             f.write(f"latest={latest}\n")
+            f.write(f"builds={json.dumps(builds, separators=(',',':'))}\n")
     else:
-        print(json.dumps({"tags": tags, "latest": latest}, separators=(",", ":")))
+        print(
+            json.dumps(
+                {
+                    "runtime_tags": runtime_tags,
+                    "devel_tags": devel_tags,
+                    "latest": latest,
+                    "builds": builds,
+                },
+                separators=(",", ":"),
+            )
+        )
 
     return 0
 

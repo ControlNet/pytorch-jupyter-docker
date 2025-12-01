@@ -11,8 +11,8 @@ jobs:
     name: Discover PyTorch runtime tags
     runs-on: ubuntu-latest
     outputs:
-      tags: ${{ steps.discover.outputs.tags }}
-      latest: ${{ steps.discover.outputs.latest }}
+      builds: ${{ steps.discover.outputs.builds }}
+      latest_runtime: ${{ steps.discover.outputs.latest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -33,7 +33,7 @@ jobs:
 
     strategy:
       matrix:
-        pytorch-tag: ${{ fromJson(needs.discover-tags.outputs.tags) }}
+        build: ${{ fromJson(needs.discover-tags.outputs.builds) }}
 
     steps:
       - name: Checkout
@@ -50,16 +50,17 @@ jobs:
 
       - name: Build and push image
         uses: docker/build-push-action@v4
+        if: matrix.build.exists == false
         with:
           context: .
           push: true
           build-args: |
-            PYTORCH_TAG=${{ matrix.pytorch-tag }}
-          tags: controlnet/pytorch-jupyter:${{ matrix.pytorch-tag }}
+            PYTORCH_TAG=${{ matrix.build.tag }}
+          tags: controlnet/pytorch-jupyter:${{ matrix.build.tag }}
 
       - name: Tag latest
-        if: matrix.pytorch-tag == needs.discover-tags.outputs.latest
+        if: matrix.build.push_latest == true
         run: |
           docker buildx imagetools create \
             --tag controlnet/pytorch-jupyter:latest \
-            controlnet/pytorch-jupyter:${{ matrix.pytorch-tag }}
+            controlnet/pytorch-jupyter:${{ matrix.build.tag }}
