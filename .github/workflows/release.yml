@@ -70,6 +70,7 @@ jobs:
             controlnet/pytorch-jupyter:${{ matrix.build.tag }}
 
       - name: Prepare summary line
+        id: prepare_summary
         if: always()
         run: |
           status_raw="${{ job.status }}"
@@ -91,14 +92,16 @@ jobs:
           icon_build=$([ "$will_build" = "true" ] && echo "🟢 build" || echo "⏭️ skip")
           icon_latest=$([ "$latest" = "true" ] && echo "⭐ yes" || echo "")
 
-          echo "| ${tag} | ${icon_exists} | ${icon_build} | ${icon_latest} | ${status} |" > summary_line.txt
+          filename="summary-${tag}.txt"
+          echo "| ${tag} | ${icon_exists} | ${icon_build} | ${icon_latest} | ${status} |" > "$filename"
+          echo "SUMMARY_FILE=$filename" >> "$GITHUB_OUTPUT"
 
       - name: Upload summary line
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: summary-${{ matrix.build.tag }}
-          path: summary_line.txt
+          path: ${{ steps.prepare_summary.outputs.SUMMARY_FILE || 'summary_line.txt' }}
 
   summarize:
     name: Summarize build matrix
