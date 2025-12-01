@@ -68,3 +68,52 @@ jobs:
           docker buildx imagetools create \
             --tag controlnet/pytorch-jupyter:latest \
             controlnet/pytorch-jupyter:${{ matrix.build.tag }}
+
+      - name: Prepare summary line
+        if: always()
+        run: |
+          status_raw="${{ job.status }}"
+          tag="${{ matrix.build.tag }}"
+          exists="${{ matrix.build.exists }}"
+          will_build="${{ matrix.build.will_build }}"
+          latest="${{ matrix.build.push_latest }}"
+
+          # decide status
+          if [ "$will_build" = "false" ]; then
+            status="⏭️ skipped"
+          elif [ "$status_raw" = "Success" ] || [ "$status_raw" = "Succeeded" ]; then
+            status="✅ success"
+          else
+            status="❌ failure"
+          fi
+
+          icon_exists=$([ "$exists" = "true" ] && echo "✔️ yes" || echo "➖ no")
+          icon_build=$([ "$will_build" = "true" ] && echo "🟢 build" || echo "⏭️ skip")
+          icon_latest=$([ "$latest" = "true" ] && echo "⭐ yes" || echo "")
+
+          echo "| ${tag} | ${icon_exists} | ${icon_build} | ${icon_latest} | ${status} |" > summary_line.txt
+
+      - name: Upload summary line
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: summary-${{ matrix.build.tag }}
+          path: summary_line.txt
+
+  summarize:
+    name: Summarize build matrix
+    runs-on: ubuntu-latest
+    needs: [discover-tags, dockerhub-release]
+    steps:
+      - name: Download summary lines
+        uses: actions/download-artifact@v3
+        with:
+          path: summary_lines
+          pattern: summary-*
+          merge-multiple: true
+
+      - name: Write summary table
+        run: |
+          echo "| Tag | Exists | Will Build | Latest | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- | --- | --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          cat summary_lines/summary-*/summary_line.txt 2>/dev/null >> "$GITHUB_STEP_SUMMARY"
