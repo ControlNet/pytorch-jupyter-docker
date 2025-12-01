@@ -37,6 +37,7 @@ jobs:
     strategy:
       matrix:
         build: ${{ fromJson(needs.discover-tags.outputs.builds) }}
+      fail-fast: false
 
     steps:
       - name: Checkout
