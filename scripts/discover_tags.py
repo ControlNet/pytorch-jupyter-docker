@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Helper for GitHub Actions: emit available PyTorch runtime tags (>=1.13) and
+Helper for GitHub Actions: emit available PyTorch runtime tags (>=2.1) and
 the "latest" tag (highest torch version, lowest CUDA for that version) to
 GITHUB_OUTPUT. Falls back to printing JSON when GITHUB_OUTPUT is not set.
 """

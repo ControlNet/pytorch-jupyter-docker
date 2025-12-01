@@ -18,7 +18,7 @@ from typing import List, Tuple, Optional
 
 REPO = "pytorch/pytorch"
 PAGE_SIZE = 100
-MIN_VERSION: Tuple[int, ...] = (1, 13)  # minimum major.minor
+MIN_VERSION: Tuple[int, ...] = (2, 1)  # minimum major.minor
 EXCLUDED_SUBSTRINGS = ("rocm",)
 
 
