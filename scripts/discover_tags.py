@@ -56,27 +56,24 @@ def main() -> int:
     builds = []
     for t in runtime_tags:
         exists = t in existing
-        push_latest = t == latest
-        if not exists or push_latest:
-            builds.append(
-                {
-                    "tag": t,
-                    "push_latest": push_latest,
-                    "kind": "runtime",
-                    "exists": exists,
-                }
-            )
+        builds.append(
+            {
+                "tag": t,
+                "push_latest": t == latest,
+                "kind": "runtime",
+                "exists": exists,
+            }
+        )
     for t in devel_tags:
         exists = t in existing
-        if not exists:
-            builds.append(
-                {
-                    "tag": t,
-                    "push_latest": False,
-                    "kind": "devel",
-                    "exists": exists,
-                }
-            )
+        builds.append(
+            {
+                "tag": t,
+                "push_latest": False,
+                "kind": "devel",
+                "exists": exists,
+            }
+        )
 
     out_path = os.environ.get("GITHUB_OUTPUT")
     if out_path:
