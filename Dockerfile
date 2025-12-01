@@ -1,4 +1,5 @@
-FROM pytorch/pytorch:2.2.2-cuda11.8-cudnn8-runtime
+ARG PYTORCH_TAG=latest
+FROM pytorch/pytorch:${PYTORCH_TAG}
 WORKDIR /workspace
 EXPOSE 8888 6006 22
 
