@@ -67,12 +67,3 @@ jobs:
           docker buildx imagetools create \
             --tag controlnet/pytorch-jupyter:latest \
             controlnet/pytorch-jupyter:${{ matrix.build.tag }}
-
-      - name: Append summary
-        if: always()
-        env:
-          TAG: ${{ matrix.build.tag }}
-          KIND: ${{ matrix.build.kind }}
-          EXISTS: ${{ matrix.build.exists }}
-          PUSH_LATEST: ${{ matrix.build.push_latest }}
-        run: python scripts/append_summary.py

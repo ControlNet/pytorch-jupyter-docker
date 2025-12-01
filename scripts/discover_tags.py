@@ -15,6 +15,7 @@ from typing import Set
 import urllib.request
 
 TARGET_REPO = os.getenv("TARGET_REPO", "controlnet/pytorch-jupyter")
+REBUILD_EXISTING = os.getenv("REBUILD_EXISTING", "false").lower() == "true"
 
 
 def latest_runtime(tags: list[str]) -> str:
@@ -56,22 +57,26 @@ def main() -> int:
     builds = []
     for t in runtime_tags:
         exists = t in existing
+        will_build = (not exists) or REBUILD_EXISTING
         builds.append(
             {
                 "tag": t,
                 "push_latest": t == latest,
                 "kind": "runtime",
                 "exists": exists,
+                "will_build": will_build,
             }
         )
     for t in devel_tags:
         exists = t in existing
+        will_build = (not exists) or REBUILD_EXISTING
         builds.append(
             {
                 "tag": t,
                 "push_latest": False,
                 "kind": "devel",
                 "exists": exists,
+                "will_build": will_build,
             }
         )
 
@@ -83,6 +88,18 @@ def main() -> int:
             f.write(f"devel_tags={json.dumps(devel_tags, separators=(',',':'))}\n")
             f.write(f"latest={latest}\n")
             f.write(f"builds={json.dumps(builds, separators=(',',':'))}\n")
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        summary_lines = [
+            "| Tag | Kind | Exists | Will Build | Latest |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+        for b in builds:
+            summary_lines.append(
+                f"| {b['tag']} | {b['kind']} | {'yes' if b['exists'] else 'no'} | "
+                f\"{'yes' if b['will_build'] else 'no'} | {'yes' if b['push_latest'] else 'no'} |"
+            )
+        Path(summary_path).write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
     else:
         print(
             json.dumps(
