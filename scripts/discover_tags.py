@@ -15,7 +15,6 @@ from typing import Set
 import urllib.request
 
 TARGET_REPO = os.getenv("TARGET_REPO", "controlnet/pytorch-jupyter")
-REBUILD_EXISTING = os.getenv("REBUILD_EXISTING", "false").lower() == "true"
 
 
 def latest_runtime(tags: list[str]) -> str:
@@ -49,7 +48,6 @@ def get_tags(kind: str) -> list[str]:
 
 def main() -> int:
     runtime_tags = get_tags("runtime")
-    devel_tags = get_tags("devel")
     latest = latest_runtime(runtime_tags)
 
     existing = fetch_existing_tags(TARGET_REPO)
@@ -57,24 +55,12 @@ def main() -> int:
     builds = []
     for t in runtime_tags:
         exists = t in existing
-        will_build = (not exists) or REBUILD_EXISTING
+        will_build = not exists
         builds.append(
             {
                 "tag": t,
                 "push_latest": t == latest,
                 "kind": "runtime",
-                "exists": exists,
-                "will_build": will_build,
-            }
-        )
-    for t in devel_tags:
-        exists = t in existing
-        will_build = (not exists) or REBUILD_EXISTING
-        builds.append(
-            {
-                "tag": t,
-                "push_latest": False,
-                "kind": "devel",
                 "exists": exists,
                 "will_build": will_build,
             }
@@ -85,7 +71,6 @@ def main() -> int:
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "a", encoding="utf-8") as f:
             f.write(f"runtime_tags={json.dumps(runtime_tags, separators=(',',':'))}\n")
-            f.write(f"devel_tags={json.dumps(devel_tags, separators=(',',':'))}\n")
             f.write(f"latest={latest}\n")
             f.write(f"builds={json.dumps(builds, separators=(',',':'))}\n")
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
@@ -105,7 +90,6 @@ def main() -> int:
             json.dumps(
                 {
                     "runtime_tags": runtime_tags,
-                    "devel_tags": devel_tags,
                     "latest": latest,
                     "builds": builds,
                 },
