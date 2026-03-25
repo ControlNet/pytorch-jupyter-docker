@@ -1,0 +1,58 @@
+ARG PYTORCH_TAG=latest
+FROM pytorch/pytorch:${PYTORCH_TAG}
+WORKDIR /workspace
+EXPOSE 8888 6006 22
+
+ENV JUPYTER_TOKEN=123456
+ENV VENV_DIR=/opt/venv
+ENV PATH="${VENV_DIR}/bin:${PATH}"
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y vim git wget curl libgl1 unzip libsndfile1 ffmpeg gedit zsh gcc make perl build-essential openssh-server tmux python3-venv && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m venv "${VENV_DIR}" && \
+    python -m pip install --upgrade pip && \
+    python -m pip install --no-cache-dir notebook jupyterlab xeus-python && \
+    jupyter notebook --generate-config
+COPY assets/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
+
+# Setup environment
+RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.1.5/zsh-in-docker.sh)" -- \
+    -t robbyrussell \
+    -p https://github.com/zsh-users/zsh-autosuggestions \
+    -p https://github.com/zsh-users/zsh-syntax-highlighting
+
+# download theme
+RUN curl -fsSL https://raw.githubusercontent.com/ControlNet/my-zsh-theme-env/main/files/mzz-ys.zsh-theme > /root/.oh-my-zsh/themes/mzz-ys.zsh-theme
+
+# modify the .zshrc file to change the theme and add plugins
+RUN cat /root/.zshrc | sed 's/ZSH_THEME="robbyrussell"/ZSH_THEME="mzz-ys"\nZSH_DISABLE_COMPFIX="true"/' \
+    | sed 's/plugins=(git)/plugins=(git zsh-autosuggestions zsh-syntax-highlighting)/' > /root/temp.zshrc
+RUN mv /root/temp.zshrc /root/.zshrc
+
+# setup git alias
+RUN git config --global alias.lsd "log --graph --decorate --pretty=oneline --abbrev-commit --all"
+
+# enable ssh
+RUN mkdir /var/run/sshd
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
+
+# Set zsh as the default shell for SSH
+RUN sed -i 's|/bin/bash|/bin/zsh|' /etc/passwd
+
+# Copy entrypoint script
+COPY assets/entrypoint.sh /entrypoint.sh
+
+# Make the entrypoint script executable
+RUN chmod +x /entrypoint.sh
+
+# setup tmux color
+RUN echo "set -g default-terminal \"screen-256color\"" >> ~/.tmux.conf
+
+# setup term color
+RUN echo "export TERM=xterm-256color" >> ~/.zshrc
+
+SHELL ["/bin/zsh", "-c"]
+ENTRYPOINT ["/entrypoint.sh"]

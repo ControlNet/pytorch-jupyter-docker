@@ -6,8 +6,9 @@ echo "root:${JUPYTER_TOKEN}" | chpasswd
 # Start the SSH service
 service ssh start
 
-# init shell
-conda init zsh
-
-# Launch Jupyter Lab
-conda run --no-capture-output -n base jupyter lab --allow-root
+if command -v conda >/dev/null 2>&1; then
+    # init shell
+    conda init zsh
+    exec conda run --no-capture-output -n base jupyter lab --allow-root
+fi
+exec jupyter lab --allow-root
