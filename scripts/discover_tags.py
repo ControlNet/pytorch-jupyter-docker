@@ -4,28 +4,50 @@ Helper for GitHub Actions: emit available PyTorch runtime tags (>=2.1) and
 the "latest" tag (highest torch version, lowest CUDA for that version) to
 GITHUB_OUTPUT. Falls back to printing JSON when GITHUB_OUTPUT is not set.
 """
+
 from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Set
 import urllib.request
 
 TARGET_REPO = os.getenv("TARGET_REPO", "controlnet/pytorch-jupyter")
+NEW_RUNTIME_MIN_VERSION = (2, 10)
+
+
+def parse_version(tag: str) -> tuple[int, ...] | None:
+    match = re.match(r"(?P<ver>\d+(?:\.\d+)+)", tag)
+    if match is None:
+        return None
+    try:
+        return tuple(int(part) for part in match.group("ver").split("."))
+    except ValueError:
+        return None
+
+
+def select_build_family(tag: str) -> tuple[str, str]:
+    version = parse_version(tag)
+    if (
+        version is not None
+        and version[: len(NEW_RUNTIME_MIN_VERSION)] >= NEW_RUNTIME_MIN_VERSION
+    ):
+        return ("system-python", "Dockerfile.runtime-python")
+    return ("conda", "Dockerfile")
 
 
 def latest_runtime(tags: list[str]) -> str:
     return tags[0] if tags else ""
 
 
-def fetch_existing_tags(repo: str) -> Set[str]:
+def fetch_existing_tags(repo: str) -> set[str]:
     """
     Fetch existing tags from a Docker Hub repo, returning a set of tag names.
     """
-    tags: Set[str] = set()
+    tags: set[str] = set()
     url = f"https://hub.docker.com/v2/repositories/{repo}/tags?page_size=100"
     while url:
         with urllib.request.urlopen(url) as resp:  # nosec B310
@@ -56,11 +78,14 @@ def main() -> int:
     for t in runtime_tags:
         exists = t in existing
         will_build = not exists
+        build_family, dockerfile = select_build_family(t)
         builds.append(
             {
                 "tag": t,
                 "push_latest": t == latest,
                 "kind": "runtime",
+                "build_family": build_family,
+                "dockerfile": dockerfile,
                 "exists": exists,
                 "will_build": will_build,
             }
@@ -70,9 +95,9 @@ def main() -> int:
     if out_path:
         Path(out_path).parent.mkdir(parents=True, exist_ok=True)
         with open(out_path, "a", encoding="utf-8") as f:
-            f.write(f"runtime_tags={json.dumps(runtime_tags, separators=(',',':'))}\n")
+            f.write(f"runtime_tags={json.dumps(runtime_tags, separators=(',', ':'))}\n")
             f.write(f"latest={latest}\n")
-            f.write(f"builds={json.dumps(builds, separators=(',',':'))}\n")
+            f.write(f"builds={json.dumps(builds, separators=(',', ':'))}\n")
     if not os.environ.get("GITHUB_STEP_SUMMARY"):
         print(
             json.dumps(

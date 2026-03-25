@@ -57,6 +57,7 @@ jobs:
         if: matrix.build.exists == false || github.event_name == 'workflow_dispatch'
         with:
           context: .
+          file: ${{ matrix.build.dockerfile }}
           push: true
           build-args: |
             PYTORCH_TAG=${{ matrix.build.tag }}
