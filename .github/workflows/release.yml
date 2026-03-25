@@ -83,7 +83,7 @@ jobs:
           # decide status
           if [ "$will_build" = "false" ]; then
             status="⏭️ skipped"
-          elif [ "$status_raw" = "Success" ] || [ "$status_raw" = "Succeeded" ]; then
+          elif [ "$status_raw" = "success" ] || [ "$status_raw" = "Success" ] || [ "$status_raw" = "Succeeded" ]; then
             status="✅ success"
           else
             status="❌ failure"
